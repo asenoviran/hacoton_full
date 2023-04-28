@@ -1,0 +1,19 @@
+djangorestframework
+psycopg2-binary
+Pillow
+python-decouple
+drf-yasg
+django-filter
+
+# обработчик задач
+celery
+# брокер сообщений, бд для кэша
+redis
+# работа с пользователями
+djoser
+# работа с токенами
+djangorestframework_simplejwt
+# для открытия доступа к серверу
+django-cors-headers
+# для генерации slug
+python-slugify
