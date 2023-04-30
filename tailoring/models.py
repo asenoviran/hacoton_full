@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.core.validators import RegexValidator
+# from django.core.validators import RegexValidator
 
 
 User = get_user_model()
@@ -65,47 +65,17 @@ class OrderStatus(models.Model):
         ('completed', 'Завершен'),
         ('canceled', 'Отменен'),
     )
-
+    
     orders = models.ForeignKey(Order, on_delete=models.CASCADE)
     status = models.CharField(choices=STATUS_CHOICES, max_length=20)
 
     class Meta:
         verbose_name = 'Статус заказа'
         verbose_name_plural = 'Статус заказов'
-        
+
 
     def __str__(self):
         return self.status
-    
-
-
-class Employee(models.Model):
-    first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
-    position = models.CharField(max_length=50)
-    email = models.EmailField()
-    phone = models.CharField(max_length=20)
-
-    class Meta:
-        verbose_name = 'Сотрудник'
-        verbose_name_plural = 'Сотрудники'
-
-    def __str__(self):
-        return f"{self.first_name} {self.last_name}"
-    
-
-
-class Document(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    document_type = models.CharField(max_length=50)
-    file = models.FileField(upload_to='documents/')
-    
-    class Meta:
-        verbose_name = 'Документ'
-        verbose_name_plural = 'Документы'
-
-    def __str__(self):
-        return f"{self.document_type} for Order {self.order}"
 
 
 
@@ -156,6 +126,7 @@ class Product(models.Model):
 
 class OrderProduct(models.Model):
 
+    customer = models.ForeignKey(User, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveBigIntegerField()
     
@@ -165,6 +136,50 @@ class OrderProduct(models.Model):
 
     def __str__(self):
         return self.product.name
+    
+
+class Like(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='likes')
+
+    class Meta:
+        verbose_name = 'Лайк'
+        verbose_name_plural = 'Лайки'
+        unique_together = ('user', 'product')
+
+    
+    def __str__(self):
+        return f'Liked by {self.user.email}'
+    
+
+    
+class Favorite(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='favorites')
+
+    class Meta:
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранные'
+        unique_together = ('user', 'product')
+
+    def __str__(self):
+        return f'{self.product.name} Added to favorites by {self.user.email}'
+    
+
+class Review(models.Model):
+    product =  models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+    
+    def __str__(self) -> str:
+        return f'Отзыв от {self.user.email}'
+    
     
 
 

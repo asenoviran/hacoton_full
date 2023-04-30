@@ -1,12 +1,17 @@
 from rest_framework.routers import DefaultRouter
-from .views import  OrderProductViewSet, OrderStatusViewSet, OrderViewSet, ProductCategoryViewSet, ProductViewSet, EmployeeViewSet, DocumentViewSet
+from django.urls import path, include
+from .views import  OrderProductViewSet, OrderViewSet, ProductCategoryViewSet, ProductViewSet, FavoriteListAPIView
+
 
 router = DefaultRouter()
 router.register('orderproduct', OrderProductViewSet, 'orderproducts')
-router.register('orderstatus', OrderStatusViewSet, 'orderstatus')
 router.register('order', OrderViewSet, 'orders')
 router.register('productcategory', ProductCategoryViewSet, 'productcategorys')
 router.register('product', ProductViewSet, 'products')
-router.register('employe', EmployeeViewSet, 'employes')
-router.register('document', DocumentViewSet, 'documents')
-urlpatterns = router.urls
+
+
+urlpatterns = [
+    path('', include(router.urls)),
+    path('favorites/', FavoriteListAPIView.as_view(), name='favorites'),
+    
+]

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Order, OrderStatus, Employee, Document, ProductCategory, Product, OrderProduct
+from .models import Order, OrderStatus, ProductCategory, Product, OrderProduct, Like, Review, Favorite
 
 
 
@@ -19,33 +19,11 @@ class OrderStatusSerializer(serializers.ModelSerializer):
         
 
 class OrderSerializer(serializers.ModelSerializer):
-    status = OrderStatusSerializer()
 
     class Meta:
         model = Order
         fields = '__all__'
 
-
-class EmployeeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Employee
-        fields = '__all__'
-
-    def create(self, validated_data):
-        employee = Employee.objects.create(**validated_data)
-        return employee
-
-
-class DocumentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Document
-        fields = '__all__'
-    
-    def update(self, instance, validated_data):
-        instance.name = validated_data.get('name', instance.name)
-        instance.file = validated_data.get('file', instance.file)
-        instance.save()
-        return instance
 
 
 class ProductCategorySerializer(serializers.ModelSerializer):
@@ -57,16 +35,31 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    category = ProductCategorySerializer()
+    likes = serializers.SerializerMethodField(method_name='get_likes_count')
+    image = serializers.ImageField(max_length=None, use_url=True)
+    
 
     class Meta:
         model = Product
         fields = '__all__'
 
-    def validate_price(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Цена должна быть больше 0.")
-        return value
+    
+    def get_likes_count(self, instance) -> int:
+        return Like.objects.filter(product=instance).count()
+    
+
+    def create(self, validated_data):
+        validated_data['owner'] = self.context['request'].user
+        return super().create(validated_data)
+    
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['liked_users'] = LikeSerializer(instance.likes.all(), many=True).data
+        representation['reviews'] = ReviewSerializer(instance.reviews.all(), many=True).data
+        return representation
+    
+
 
 
 class OrderProductSerializer(serializers.ModelSerializer):
@@ -80,3 +73,29 @@ class OrderProductSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError("Количество должно быть больше 0.")
         return value
+    
+class LikeSerializer(serializers.ModelSerializer):
+    user = serializers.ReadOnlyField(source='user.email')
+
+    
+    class Meta:
+        model = Like
+        fields = ('user',)
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    user = serializers.ReadOnlyField(source='user.email')
+
+    class Meta:
+        model = Favorite
+        fields = ('user', 'product')
+
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = Review
+        fields = ('id', 'user', 'product', 'text', 'created_at', 'updated_at')
+        read_only_fields = ['product']

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
 
-from user.models import OwnerRequest
+from .models import OwnerRequest
 from .utils import send_activation_code, create_activation_code
 
 User = get_user_model()
@@ -61,18 +61,19 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('Пользователь с таким email не найден')
         return email
 
-    # def validate(self, attrs):
-    #     request = self.context.get('request')
-    #     email = attrs.get('email')
-    #     password = attrs.get('password')
-    #     # if email and password:
-    #     #     user = authenticate(email=email, password=password, request=request)
-    #     #     if not user:
-    #     #         raise serializers.ValidationError('Неправильно указан email или пароль')
-    #     # else:
-    #     #     raise serializers.ValidationError('Email и пароль обязательны к заполнению')
-    #     attrs['user'] = user
-    #     return attrs
+    def validate(self, attrs):
+        request = self.context.get('request')
+        email = attrs.get('email')
+        password = attrs.get('password')
+        if email and password:
+            user = authenticate(email=email, password=password, request=request)
+            if not user:
+                raise serializers.ValidationError('Неправильно указан email или пароль')
+            print('User is authenticated:', user)
+        else:
+            raise serializers.ValidationError('Email и пароль обязательны к заполнению')
+        attrs['user'] = user
+        return attrs
 
 
 class ChangePasswordSerializer(serializers.Serializer):
