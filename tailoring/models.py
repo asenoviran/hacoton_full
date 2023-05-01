@@ -18,7 +18,7 @@ User = get_user_model()
 #     def __str__(self):
 #         return self.name
 
-class Order(models.Model):
+class OrderTailoring(models.Model):
     TYPE_CHOICES = (
         ('shirt', 'Рубашка'),
         ('pants', 'Брюки'),
@@ -46,6 +46,7 @@ class Order(models.Model):
     color = models.CharField(choices=COLOR_CHOICES, max_length=10)
     material = models.CharField(max_length=20)
     address = models.CharField(max_length=200)
+    payment = models.ForeignKey('Payment', on_delete=models.SET_NULL,related_name='order_tailorings', null=True, blank=True)
     
 
     
@@ -66,7 +67,7 @@ class OrderStatus(models.Model):
         ('canceled', 'Отменен'),
     )
     
-    orders = models.ForeignKey(Order, on_delete=models.CASCADE)
+    order = models.ForeignKey(OrderTailoring, on_delete=models.CASCADE, related_name='statuses')
     status = models.CharField(choices=STATUS_CHOICES, max_length=20)
 
     class Meta:
@@ -115,6 +116,7 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     image = models.ImageField(upload_to='products/')
     is_active = models.BooleanField(default=True)
+    
 
     class Meta:
         verbose_name = 'Товар'
@@ -129,6 +131,7 @@ class OrderProduct(models.Model):
     customer = models.ForeignKey(User, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveBigIntegerField()
+    payment = models.ForeignKey('Payment', on_delete=models.SET_NULL, null=True, blank=True, related_name='order_products')
     
     class Meta:
         verbose_name = 'Заказ товара'
@@ -179,6 +182,22 @@ class Review(models.Model):
     
     def __str__(self) -> str:
         return f'Отзыв от {self.user.email}'
+    
+
+class Payment(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    order_tailoring = models.ForeignKey(OrderTailoring, on_delete=models.CASCADE, related_name='payments')
+    order_product = models.ForeignKey(OrderProduct, on_delete=models.CASCADE, related_name='payments')
+    stripe_charge_id = models.CharField(max_length=50)
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Платеж'
+        verbose_name_plural = 'Платежи'
+
+    def __str__(self):
+        return self.stripe_charge_id
     
     
 

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Order, OrderStatus, ProductCategory, Product, OrderProduct, Like, Review, Favorite
+from .models import OrderTailoring, OrderStatus, ProductCategory, Product, OrderProduct, Like, Review, Favorite, Payment
 
 
 
@@ -18,10 +18,10 @@ class OrderStatusSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Выбранный товар неактивен.")
         
 
-class OrderSerializer(serializers.ModelSerializer):
+class OrderTailoringSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Order
+        model = OrderTailoring
         fields = '__all__'
 
 
@@ -60,6 +60,11 @@ class ProductSerializer(serializers.ModelSerializer):
         return representation
     
 
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = '__all__'
 
 
 class OrderProductSerializer(serializers.ModelSerializer):

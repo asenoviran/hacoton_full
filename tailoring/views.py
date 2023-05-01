@@ -8,27 +8,18 @@ from django.db.models import Avg, Count
 from rest_framework.response import Response
 from django.http import HttpResponse
 from .permissions import IsAuthor, IsOwnerAndAuthor, IsOwner
-from .serializers import OrderSerializer, OrderStatusSerializer, OrderProductSerializer, ProductCategorySerializer, ProductSerializer, FavoriteSerializer, LikeSerializer, ReviewSerializer
-from .models import Order, OrderStatus, OrderProduct, Product, ProductCategory, Review, Favorite, Like
+from .serializers import OrderTailoringSerializer, OrderStatusSerializer, OrderProductSerializer, ProductCategorySerializer, ProductSerializer, FavoriteSerializer, LikeSerializer, ReviewSerializer, PaymentSerializer
+from .models import OrderTailoring, OrderStatus, OrderProduct, Product, ProductCategory, Review, Favorite, Like, Payment
 
+import stripe
 from django.core.mail import send_mail
 from django.conf import settings
 
 
-class OrderViewSet(ModelViewSet):
-    queryset = Order.objects.all()
-    # queryset = OrderStatus.objects.all()
-    serializer_class = OrderSerializer
+class OrderTailoringViewSet(ModelViewSet):
+    queryset = OrderTailoring.objects.all()
+    serializer_class = OrderTailoringSerializer
 
-    # def send_email(self, *args, **kwargs):
-    #     status = kwargs.get('status')
-    #     # def send_order_status_email(order):
-    #     subject = f"Заказ {order.pk} изменен на статус {order.status}"
-    #     message = f"Уважаемый(-ая) {order.customer.first_name},\n\nСтатус вашего заказа изменен на {order.status}."
-    #     from_email = settings.EMAIL_HOST_USER
-    #     recipient_list = [order.customer.email]
-
-    #     send_mail(subject, message, from_email, recipient_list)
 
     def update_order_status(self, request, order_status_id):
         order_status = OrderStatus.objects.get(id=order_status_id)
@@ -43,6 +34,32 @@ class OrderViewSet(ModelViewSet):
         recipient_list = [self.request.user.email]
         send_mail(subject, message, from_email, recipient_list)
         return HttpResponse('Статус заказа успешно обновлен и отправлено уведомление на почту заказчику')
+    
+
+    @action(detail=True, methods=['post'])
+    def pay(self, request, pk=None):
+        ordertailoring = self.get_object()
+        amount = int(ordertailoring.price * 100)  # Переводим цену в копейки
+
+        # Создаем платеж на Stripe
+        try:
+            charge = stripe.Charge.create(
+                amount=amount,
+                currency='usd',
+                description=f'Оплата заказа на пошив №{ordertailoring.id}',
+                source=request.data['stripeToken'],
+            )
+
+            # Связываем успешно оплаченный заказ с пользователем
+            ordertailoring.customer = request.user
+            ordertailoring.save()
+
+            return Response({'message': 'Заказ успешно оплачен!'})
+        except stripe.error.CardError as e:
+            # Обработка ошибок
+            return Response({'message': 'Ошибка оплаты: неверные данные карты.'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'message': 'Произошла ошибка.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ProductCategoryViewSet(ModelViewSet):
     queryset = ProductCategory.objects.all()
@@ -131,6 +148,73 @@ class OrderProductViewSet(ModelViewSet):
     queryset = OrderProduct.objects.all()
     serializer_class = OrderProductSerializer
 
+
+    @action(detail=True, methods=['post'])
+    def pay(self, request, pk=None):
+        orderproduct = self.get_object()
+        amount = int(orderproduct.product.price * orderproduct.quantity * 100)  # Переводим цену в копейки
+
+        # Создаем платеж на Stripe
+        try:
+            charge = stripe.Charge.create(
+                amount=amount,
+                currency='usd',
+                description=f'Оплата заказа товара №{orderproduct.id}',
+                source=request.data['stripeToken'],
+            )
+
+            # Связываем успешно оплаченный заказ с пользователем
+            orderproduct.customer = request.user
+            orderproduct.save()
+
+            return Response({'message': 'Заказ успешно оплачен!'})
+        except stripe.error.CardError as e:
+            # Обработка ошибок
+            return Response({'message': 'Ошибка оплаты: неверные данные карты.'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'message': 'Произошла ошибка.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PaymentViewSet(ModelViewSet):
+    queryset = Payment.objects.all()
+    serializer_class = PaymentSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Получаем данные из сериализатора
+        amount = serializer.validated_data['amount']
+        order_id = serializer.validated_data['order']
+        order_product_id = serializer.validated_data['order_product']
+        token = serializer.validated_data['token']
+
+        # Получаем заказы из базы данных
+        order = OrderTailoring.objects.get(id=order_id)
+        order_product = OrderProduct.objects.get(id=order_product_id)
+
+        try:
+            # Создаем платеж на Stripe
+            charge = stripe.Charge.create(
+                amount=int(amount * 100),
+                currency='usd',
+                description='Example charge',
+                source=token,
+            )
+            # Создаем объект платежа в нашей базе данных
+            payment = Payment.objects.create(
+                user=request.user,
+                order=order,
+                order_product=order_product,
+                stripe_charge_id=charge.id,
+                amount=amount,
+            )
+            # Возвращаем успешный ответ
+            return Response({'status': 'success'})
+        except stripe.error.CardError as e:
+            # Если произошла ошибка, возвращаем ее в ответе
+            return Response({'status': e})
+        
 
 class FavoriteListAPIView(generics.ListAPIView):
     serializer_class = FavoriteSerializer
