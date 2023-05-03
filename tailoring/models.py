@@ -186,20 +186,18 @@ class Review(models.Model):
 
 class Payment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    order_tailoring = models.ForeignKey(OrderTailoring, on_delete=models.CASCADE, related_name='payments')
-    order_product = models.ForeignKey(OrderProduct, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_date = models.DateTimeField(auto_now_add=True)
     stripe_charge_id = models.CharField(max_length=50)
-    amount = models.DecimalField(max_digits=8, decimal_places=2)
-    timestamp = models.DateTimeField(auto_now_add=True)
+    order_tailoring = models.ForeignKey(OrderTailoring, on_delete=models.SET_NULL, null=True, blank=True, related_name='payments')
+    order_product = models.ForeignKey(OrderProduct, on_delete=models.SET_NULL, null=True, blank=True, related_name='payments')
 
     class Meta:
         verbose_name = 'Платеж'
         verbose_name_plural = 'Платежи'
 
     def __str__(self):
-        return self.stripe_charge_id
-    
-    
+        return f"{self.user.email} ({self.amount})"
 
 
 

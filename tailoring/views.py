@@ -15,6 +15,7 @@ import stripe
 from django.core.mail import send_mail
 from django.conf import settings
 
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class OrderTailoringViewSet(ModelViewSet):
     queryset = OrderTailoring.objects.all()
@@ -70,7 +71,7 @@ class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
-
+    filterset_fields = ['name']
 
     def get_permissions(self):
         if self.action == self.action == 'like' or self.action == 'favorite' or self.action == 'review':

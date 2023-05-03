@@ -210,3 +210,6 @@ LOGGING = {
         },
     },
 }
+
+
+STRIPE_SECRET_KEY = 'sk_test_51N3FnNAJVgdHesSHjJtdnLCd0indMvPjjAUYxBnWlN3qe4C6bimXgkdQ8B5oUOvIoUzQvlZc7WUAUhU35Fsjkn7l00G63PRNU1'
