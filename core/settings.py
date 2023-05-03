@@ -10,7 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
-import dj_database_url
 from pathlib import Path
 from decouple import config
 
@@ -83,7 +82,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASE_URL = os.environ.get('DATABASE_URL')
+
 DATABASES = {
     'default': {
         'ENGINE': config('DB_ENGINE'),
@@ -152,9 +151,9 @@ AUTH_USER_MODEL = 'user.User'
 # Email sending settings
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_HOST_USER = config('EMAIL_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+EMAIL_HOST_PASSWORD = config('EMAIL_PASSWORD')
 EMAIL_PORT = config('EMAIL_PORT')
-EMAIL_USE_TLS = config('USE-TLS', cast=bool)
+EMAIL_USE_TLS = config('USE_TLS', cast=bool)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 
